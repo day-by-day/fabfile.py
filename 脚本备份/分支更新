@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+#coding:utf8
+
+from fabric.api import *
+import sys
+
+#后续会优化成可视化，策划直接点击按钮，就可以套用此脚本。
+#如下的服务器选择，即相当于传参数，   ---在函数外面传参数。
+
+#host里面的机器需要先添加信任关系，才可以使用此脚本
+#servers = ['118.89.155.177','115.159.194.194','118.89.103.107']
+env.hosts = ['118.89.155.177','115.159.194.194']
+#env.hosts = ['118.89.103.107']
+#env.hosts = ['192.168.0.163']
+env.user = 'root'
+#env.password = ''
+
+
+work_dir='/data/jtyl/publish/'                      #更新git库脚本的本地路径          #此目录也可以使用传参 ---在函数外面传参数。
+script_filename='package_update_all.sh'             #脚本名
+remote_dir='/data/jtyl'                            #将本地的文件压缩拷贝到远程的那个目录
+
+#实例：fab locate:fzname=deploy,model='gamc'          后面会询问是否执行startup.sh脚本
+#参数说明： 传输文件到env.hosts机器上，文件名使用首字母a(admin),c(config),g(game),m(master)，支持传输多个文件，连着写，如:acm
+#特别说明，执行startup.sh脚本的时候会读取config配置文件，所以需要先传输解压config文件后再执行，如：cam
+i = 0
+
+#实例：fab update_jtyl
+def update_jtyl():
+    global i
+    if i == 0:                                  #只git代码一遍
+        global fzname,model,value
+        fzname = prompt('请输入分支名:(deploy public banshu_20170705 yiwan_20170619)', default='deploy', validate=str)
+        model = prompt('请输入模块名首字母:{a(admin),c(config),g(game),m(master)}', default='gc', validate=str)
+        if model != 'c':
+            value = prompt('是否执行startup.sh:(y/n)', default='y', validate=str)
+        global fzname,model,value
+
+        with lcd(work_dir):
+            cmd = "sh " + script_filename + " " + fzname        #分支值：deploy public banshu_20170705 yiwan_20170619
+            local(cmd)                    #执行本地脚本package_update_all.sh  作用：git代码
+            i += 1
+
+    with lcd(work_dir+'jtyl'):
+        if 'c' in model:
+            print "开始传输jtyl_config.tar.gz文件..."
+            local_file = "jtyl_config.tar.gz"
+            put(local_file,remote_dir)
+        for file in model:
+            if file == 'a':
+                file = 'admin'
+            elif file == 'm':
+                file = 'master'
+            elif file == 'g':
+                file = 'game'
+            elif file == 'c':
+                file = 'config'
+                continue
+            else:
+                print "model输入值有误，请输入a(admin),c(config),g(game),m(master)"
+                sys.exit(1)
+            print "开始传输jtyl_" + file + ".tar.gz文件..."
+            local_file = "jtyl_" + file + ".tar.gz"
+            put(local_file,remote_dir)                          #put(local, remote): 从本地上传文件到远程机器上
+
+    with cd(remote_dir):                                        #在远程机器上解压刚才传输过来的文件
+        if 'c' in model:
+            print "开始解压jtyl_config.tar.gz文件"
+            unzip_file = "tar xf jtyl_config.tar.gz"
+            run(unzip_file)
+            if model == 'c':
+                print "开始执行game目录下的startup.sh"
+                #remote_cmd = "bash " + remote_dir + "jtyl_game/startup.sh"
+                with cd(jtyl_game):
+                    run('ls')
+                    run('sh startup.sh')
+                #sys.exit(0)                不能使用这个，直接退出程序导致后面一台机器没有执行此脚本
+        for line in model:
+            if line == 'a':
+                line = 'admin'
+            if line == 'm':                                        #这里可以不用elif，如果输入有误，在前面已经退出程序了。
+                line = 'master'
+            if line == 'g':
+                line = 'game'
+            if line == 'c':
+                line = 'config'                                 #不要删除，下面还有一个判断需要用到
+                continue
+            print "开始解压jtyl_" + line + ".tar.gz文件"
+            unzip_file = "tar xf jtyl_" + line + ".tar.gz"
+            run(unzip_file)
+            if value in ['Y','y']:
+                print "开始执行" + line + "目录下的startup.sh"
+                #remote_cmd = "bash " + remote_dir + "jtyl_" + line + "/startup.sh"
+                startup_dir = 'jtyl_' + line
+                with cd(startup_dir):
+                    run('ls')
+                    run('sh startup.sh')
+                    run('jps')
+                    run('sh startup.sh')
+                    run('jps')
+            elif value in ['N','n']:
+                print "不执行startup.sh"
+            else:
+                print "第三个参数请输入 Y or N"

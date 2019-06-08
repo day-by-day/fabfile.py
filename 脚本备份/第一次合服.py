@@ -9,7 +9,7 @@
 合服过程中出现同名的玩家名称，将被合过来的玩家名称追加_2       player，tong
 出现帮派同名，两个帮派都加后缀，然后给该帮派帮主发改名卡        tong
 
-需求2：   --黄鑫，      需求已解决
+需求2：   ，      需求已解决
 money_tree_reward
 假设 把game2合到game1, 只保留game1
 找出game1和game2的 money_tree_reward  id最大那条
@@ -18,7 +18,7 @@ info字段[{game1的内容1}]  和 [{game2 的内容1}]合并成 [{game1的内�
 money_tree 表的话可以直接合并
 tong_battle 开头的表 合区的时候全部清空
 
-wealth 表的id已经做成全服唯一了，可以直接合--品龙  前面是几个服的话，需要手动，  以后的新服不会出现冲突
+wealth 表的id已经做成全服唯一了，可以直接合  前面是几个服的话，需要手动，  以后的新服不会出现冲突
 mysql -uroot -p'Jtyl2017!@#$'
 
 CREATE TABLE `wealth1` (
